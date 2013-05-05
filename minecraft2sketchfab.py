@@ -12,13 +12,17 @@ import minecraft
 
 
 def getDirectoryWorld():
-    config = "%s/.minecraft/saves" % os.environ['HOME']
+    # on linux I did not tested
+    config = ""
     system = platform.platform().lower()
     if system.find('darwin') != -1:
         config = "%s/Library/Application Support/minecraft/saves/" % os.environ['HOME']
     elif system.find('windows') != -1:
         config = "%s/Roaming/.minecraft/saves/" % os.environ['APPDATA']
-
+    else:
+        # CP:
+        # to clement, could you test the path is correct 
+        config = "%s/.minecraft/saves" % os.environ['HOME']
     return config
 
 # return a list of world with directory
@@ -31,6 +35,18 @@ def getWorlds():
         if os.path.isdir(p):
             worlds_final.append((a, p))
     print worlds_final
+    return worlds_final
+
+
+# the current interface does nothin it's just to have a minimal setup
+# that works on a standalone application on osx and windows
+
+# a few thought
+# - the api key should be saved to not enter it each time
+# - the position should be optional
+# - the user should be able to select which world he wants to save ( getWorlds )
+# - add an about and a link to support
+# anything else ?
 
 def main():
     app = QtGui.QApplication(sys.argv)
