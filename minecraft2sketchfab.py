@@ -8,6 +8,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 import platform
+import minecraft
 
 
 def getDirectoryWorld():
