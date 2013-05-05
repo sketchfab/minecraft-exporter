@@ -87,25 +87,37 @@ def upload(filename, model_name, api_key):
 
     datagen, headers = multipart_encode(params)
     request = urllib2.Request(url, datagen, headers)
+    result = None
     contents = ""
     try:
         response = urllib2.urlopen(request)
         contents = response.read()
+        result = True
     except urllib2.HTTPError, error:
         contents = error.read()
+        result = False
     print contents
+    return result
+
+def process_and_upload(directory, position, api_key):
+    result = create_zip_file(directory, position)
+    if result == None:
+        return False
+
+    filename, model_name = result
+    if not upload(filename, model_name):
+        print "error while uploading file"
+        return False
+    return True
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
         sys.exit('Usage: %s api-key world-directory world-position' % sys.argv[0])
+    position = None
     if len(sys.argv) > 3:
         position = sys.argv[3];
 
     api_key = sys.argv[1]
     directory = sys.argv[2]
             
-    result = create_zip_file(directory, position)
-    if result != None:
-        filename, model_name = result
-        upload(filename, model_name)
-        print "error"
+    process_and_upload(directory, position, api_key)
