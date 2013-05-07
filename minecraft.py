@@ -5,6 +5,11 @@ import datetime
 import os
 import json
 import shutil
+
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers
+import urllib2
+
 from PyQt4 import QtNetwork, QtCore
 
 def create_zip_file(directory, position):
@@ -30,32 +35,47 @@ def create_zip_file(directory, position):
 
     tmpdir = tempfile.mkdtemp()
 
+    archive_dir = os.path.join(tmpdir, dirname)
+    # copy directory
+    shutil.copytree(directory, archive_dir)
+
+    # add export_obj.json into directory
+    f = open("%s/%s/%s" % (tmpdir, dirname, "export_obj.json"), 'wb')
+    print(position)
+    f.write(json.dumps(position))
+    f.close()
+    
     date = datetime.datetime.utcnow()
     name = "minecraft-%d-%d-%d.zip" % (date.year, date.month, date.day)
     filename = "%s/%s" % (tmpdir, name)
+    print filename
+
+    print "archive %s to file to %s" % (archive_dir, filename)
 
     # change dir to make a zip
     path = os.getcwd()
+    os.chdir(tmpdir)
     zip = zipfile.ZipFile(filename, 'w')
 
-    for dirpath,dirs,files in os.walk(directory):
+    for dirpath,dirs,files in os.walk(dirname):
         for f in files:
             fn = os.path.join(dirpath, f)
+            print fn
             zip.write(fn)
-    positionjson = json.dumps(position)
-    print(positionjson)
-    zip.writestr("export_obj.json", positionjson)
     zip.close()
 
+    # restore path
+    os.chdir(path)
     return (filename, dirname)
 
-def upload(fileModel, token, source, description, title, tags = "minecraft"):
+def upload(fileModel, token, description, title, tags = "minecraft"):
     def part_parameter(key, value):
         part = QtNetwork.QHttpPart()
         part.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"%s\"" % (key))
         part.setBody(value)
         return part
 
+    source = "minecraft-plugin"
     multiPart = QtNetwork.QHttpMultiPart(QtNetwork.QHttpMultiPart.FormDataType)
     multiPart.append(part_parameter("title", title))
     multiPart.append(part_parameter("description", description))
@@ -73,7 +93,8 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    url = QtCore.QUrl("http://sketchfab.dev/v1/models")
+    url = QtCore.QUrl("http://sketchfab-local.com/v1/models")
+
     request = QtNetwork.QNetworkRequest(url)
 
     manager = QtNetwork.QNetworkAccessManager()
@@ -82,13 +103,41 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
 
     return (manager, reply)
 
+def uploadURLLIB2(filename, api_key, description, model_name, tags = "minecraft"):
+    register_openers()
+    url="http://sketchfab-local.com/v1/models"
+    print filename
+    params = {
+        'fileModel': open(filename, "rb"),
+        'title': model_name,
+        'description': description,
+        'tags': tags,
+        'token': api_key,
+        'source': 'minecraft-plugin'
+        }
+
+    datagen, headers = multipart_encode(params)
+    request = urllib2.Request(url, datagen, headers)
+    result = None
+    contents = ""
+    try:
+        response = urllib2.urlopen(request)
+        print response.info()
+        contents = response.read()
+        result = True
+    except urllib2.HTTPError, error:
+        contents = error.read()
+        result = False
+    print contents
+    return result
+
 def process_and_upload(directory, position, api_key):
     result = create_zip_file(directory, position)
     if result == None:
         return False
 
     filename, model_name = result
-    if not upload(filename, model_name):
+    if not uploadURLLIB2(filename, api_key, "", model_name):
         print "error while uploading file"
         return False
     return True

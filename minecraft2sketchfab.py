@@ -105,8 +105,7 @@ class Window(QtGui.QWidget):
             title = self.currentWorld[0],
             description = "Minecraft %s" % (self.currentDimension[0]),
             tags = "minecraft test",
-            token = str(self.editToken.text()),
-            source = "minecraft-plugin"
+            token = str(self.editToken.text())
         )
 
         def upload_finished():
