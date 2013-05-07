@@ -61,6 +61,9 @@ def getDimensions(world):
 # a few thought
 # - the api key should be saved to not enter it each time
 # - the position should be optional
+# - force position to int only
+# - write an explanation on how to get position
+# - validate form
 # - add an about and a link to support
 # anything else ?
 
@@ -68,6 +71,7 @@ class Window(QtGui.QWidget):
     def __init__(self, parent = None):
         super(Window, self).__init__(parent)
         self.setWindowTitle('Minecraft2Sketchfab')
+        self.settings = QtCore.QSettings("Sketchfab", "Minecraft2Sketchfab")
 
         grid = QtGui.QGridLayout()
         grid.addWidget(self.createWorldGroup(), 0, 0, 1, 0)
@@ -87,6 +91,7 @@ class Window(QtGui.QWidget):
     def start_upload(self):
         progress = QtGui.QProgressDialog("Uploading...", "Cancel", 0, 100, self)
         progress.show()
+        self.settings.setValue("account/token", self.editToken.text())
 
         params = {
             "area": {
@@ -97,8 +102,7 @@ class Window(QtGui.QWidget):
             "dimension": self.currentDimension[1]
         }
         filename, dirname = minecraft.create_zip_file(self.currentWorld[1], params)
-        print("Zip file : %s" % (filename))
-        print("Zip dir : %s" % (dirname))
+        print(filename)
 
         self.manager, self.reply = minecraft.upload(
             fileModel = filename,
@@ -127,22 +131,24 @@ class Window(QtGui.QWidget):
 
         def upload_error():
             progress.cancel()
-            data = json.loads(str(self.reply.readAll()))
+            rawData = str(self.reply.readAll())
             progress.close()
-            if data and "success" in data and data["success"] == False:
-                QtGui.QMessageBox.critical(self, "Upload error", data["error"])
-            else:
-                QtGui.QMessageBox.critical(self, "Upload network error", self.reply.errorString())
+            if rawData:
+                data = json.loads(rawData)
+                if data and "success" in data and data["success"] == False:
+                    QtGui.QMessageBox.critical(self, "Upload error", data["error"])
+                    return
+            QtGui.QMessageBox.critical(self, "Upload network error", self.reply.errorString())
             self.reply = None
 
         def upload_progress(value, max):
             progress.setValue(value)
-            progress.setMaximum(max)
+            progress.setMaximum(max + 1)
 
         def download_progress(value, max):
-            progress.setValue(value)
-            progress.setMaximum(max)
-            progress.setLabelText('Downloading result...')
+            progress.setValue(0)
+            progress.setMaximum(100)
+            progress.setLabelText('Processing...')
 
         def upload_canceled():
             self.reply = None
@@ -240,8 +246,7 @@ class Window(QtGui.QWidget):
         groupBox = QtGui.QGroupBox("Sketchfab")
         grid = QtGui.QGridLayout()
 
-        self.editToken = QtGui.QLineEdit("")
-        self.editToken.setText("81d8448493734f06a7c4cc4df93b8128");
+        self.editToken = QtGui.QLineEdit(str(self.settings.value("account/token").toString()))
         grid.addWidget(QtGui.QLabel("Api token"), 0, 0)
         grid.addWidget(self.editToken, 0, 1)
 

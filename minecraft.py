@@ -35,16 +35,17 @@ def create_zip_file(directory, position):
     filename = "%s/%s" % (tmpdir, name)
 
     # change dir to make a zip
-    path = os.getcwd()
     zip = zipfile.ZipFile(filename, 'w')
 
     for dirpath,dirs,files in os.walk(directory):
         for f in files:
             fn = os.path.join(dirpath, f)
-            zip.write(fn)
+            an = os.path.relpath(fn, os.path.join(directory, "..")) #os.path.normpath(fn.replace(path, ''))
+            print(an)
+            zip.write(fn, an)
     positionjson = json.dumps(position)
     print(positionjson)
-    zip.writestr("export_obj.json", positionjson)
+    zip.writestr(os.path.join(os.path.basename(directory), "export_obj.json"), positionjson)
     zip.close()
 
     return (filename, dirname)
@@ -73,7 +74,7 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    url = QtCore.QUrl("http://sketchfab.dev/v1/models")
+    url = QtCore.QUrl("http://dev2.sketchfab.com/v1/models")
     request = QtNetwork.QNetworkRequest(url)
 
     manager = QtNetwork.QNetworkAccessManager()
