@@ -130,12 +130,12 @@ class Window(QtGui.QWidget):
             self.reply = None
 
         def upload_progress(value, max):
+            progress.setValue(value)
             progress.setMaximum(max)
-            progress.setValue(max)
 
         def download_progress(value, max):
+            progress.setValue(value)
             progress.setMaximum(max)
-            progress.setValue(max)
             progress.setLabelText('Downloading result...')
 
         def upload_canceled():

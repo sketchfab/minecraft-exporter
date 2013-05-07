@@ -90,7 +90,7 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     url = QtCore.QUrl("http://api.sketchfab.com/v1/models")
     request = QtNetwork.QNetworkRequest(url)
 
-    manager = QtNetwork.QNetworkAccessManager() # TODO: save manager from GC ?
+    manager = QtNetwork.QNetworkAccessManager()
     reply = manager.post(request, multiPart)
     multiPart.setParent(reply)
 
