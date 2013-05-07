@@ -30,36 +30,22 @@ def create_zip_file(directory, position):
 
     tmpdir = tempfile.mkdtemp()
 
-    archive_dir = "%s/%s" % (tmpdir, dirname)
-    # copy directory
-    shutil.copytree(directory, archive_dir)
-
-    # add export_obj.json into directory
-    f = open("%s/%s/%s" % (tmpdir, dirname, "export_obj.json"), 'wb')
-    print(position)
-    f.write(json.dumps(position))
-    f.close()
-    
     date = datetime.datetime.utcnow()
     name = "minecraft-%d-%d-%d.zip" % (date.year, date.month, date.day)
     filename = "%s/%s" % (tmpdir, name)
 
-    print "archive %s to file to %s" % (archive_dir, filename)
-
     # change dir to make a zip
     path = os.getcwd()
-    os.chdir(tmpdir)
     zip = zipfile.ZipFile(filename, 'w')
 
-    for dirpath,dirs,files in os.walk(dirname):
+    for dirpath,dirs,files in os.walk(directory):
         for f in files:
             fn = os.path.join(dirpath, f)
-            print fn
             zip.write(fn)
+    positionjson = json.dumps(position)
+    print(positionjson)
+    zip.writestr("export_obj.json", positionjson)
     zip.close()
-
-    # restore path
-    os.chdir(path)
 
     return (filename, dirname)
 
@@ -87,7 +73,7 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    url = QtCore.QUrl("http://api.sketchfab.com/v1/models")
+    url = QtCore.QUrl("http://sketchfab.dev/v1/models")
     request = QtNetwork.QNetworkRequest(url)
 
     manager = QtNetwork.QNetworkAccessManager()

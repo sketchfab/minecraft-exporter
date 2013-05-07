@@ -41,7 +41,7 @@ def getWorlds():
 def getDimensions(world):
     name, path = world
     dimensions_list = glob.glob(os.path.join(path, "DIM*"))
-    dimensions_final = [("Overworld", "0")]
+    dimensions_final = [("Overworld", 0)]
     default_dimensions = {
         "DIM-1": "The Nether",
         "DIM1": "The End"
@@ -55,7 +55,7 @@ def getDimensions(world):
         a = a[3:]
 
         if os.path.isdir(p):
-            dimensions_final.append((b, a))
+            dimensions_final.append((b, int(a)))
     return dimensions_final
 
 # a few thought
@@ -123,10 +123,16 @@ class Window(QtGui.QWidget):
                     QtGui.QMessageBox.critical(self, "Upload sketchfab error", json.dumps(result))
 
                 print(result)
+                progress.close()
 
         def upload_error():
             progress.cancel()
-            QtGui.QMessageBox.critical(self, "Upload network error", self.reply.errorString())
+            data = json.loads(str(self.reply.readAll()))
+            progress.close()
+            if data and "success" in data and data["success"] == False:
+                QtGui.QMessageBox.critical(self, "Upload error", data["error"])
+            else:
+                QtGui.QMessageBox.critical(self, "Upload network error", self.reply.errorString())
             self.reply = None
 
         def upload_progress(value, max):
@@ -201,7 +207,7 @@ class Window(QtGui.QWidget):
 
     def selectDimension(self, i):
         name = self.modelDimension.item(i, 0)
-        self.currentDimension = (str(name.text()), str(name.data().toPyObject()))
+        self.currentDimension = (str(name.text()), int(name.data().toPyObject()))
 
     def createAreaGroup(self):
         groupBox = QtGui.QGroupBox("Area limits")
@@ -235,7 +241,7 @@ class Window(QtGui.QWidget):
         grid = QtGui.QGridLayout()
 
         self.editToken = QtGui.QLineEdit("")
-        self.editToken.setText("40a0dd79a5fb4e0c962eab8760408585");
+        self.editToken.setText("81d8448493734f06a7c4cc4df93b8128");
         grid.addWidget(QtGui.QLabel("Api token"), 0, 0)
         grid.addWidget(self.editToken, 0, 1)
 
