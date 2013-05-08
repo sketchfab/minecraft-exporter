@@ -94,7 +94,8 @@ def upload(fileModel, token, description, title, tags="minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    url = QtCore.QUrl("http://sketchfab.dev/v1/models")
+    #url = QtCore.QUrl("http://sketchfab.dev/v1/models")
+    url = QtCore.QUrl("https://sketchfab.com/v1/models")
 
     request = QtNetwork.QNetworkRequest(url)
 
