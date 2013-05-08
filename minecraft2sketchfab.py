@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 import glob
 import json
 currentScriptPath = os.getcwd()
@@ -8,24 +9,23 @@ if currentScriptPath.find(".app") != -1:
 # We will be using things from the qt and sys modules
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-from PyQt4 import QtNetwork
 
 import platform
 import minecraft
+
 
 def getDirectoryWorld():
     # on linux I did not tested
     config = ""
     system = platform.platform().lower()
     if system.find('darwin') != -1:
-        config = os.path.join(os.environ['HOME'], "Library", "Application Support", "minecraft", "saves") 
+        config = os.path.join(os.environ['HOME'], "Library", "Application Support", "minecraft", "saves")
     elif system.find('windows') != -1:
         config = os.path.join(os.environ['APPDATA'], ".minecraft", "saves")
     else:
-        # CP:
-        # to clement, could you test the path is correct 
         config = os.path.join(os.environ['HOME'], ".minecraft", "saves")
     return config
+
 
 # return a list of world with directory
 def getWorlds():
@@ -37,6 +37,7 @@ def getWorlds():
         if os.path.isdir(p):
             worlds_final.append((a, p))
     return worlds_final
+
 
 def getDimensions(world):
     name, path = world
@@ -67,8 +68,9 @@ def getDimensions(world):
 # - add an about and a link to support
 # anything else ?
 
+
 class Window(QtGui.QWidget):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super(Window, self).__init__(parent)
         self.setWindowTitle('Minecraft2Sketchfab')
         self.settings = QtCore.QSettings("Sketchfab", "Minecraft2Sketchfab")
@@ -105,12 +107,11 @@ class Window(QtGui.QWidget):
         print(filename)
 
         self.manager, self.reply = minecraft.upload(
-            fileModel = filename,
-            title = self.currentWorld[0],
-            description = "Minecraft %s" % (self.currentDimension[0]),
-            tags = "minecraft test",
-            token = str(self.editToken.text()),
-            source = "minecraft-plugin"
+            fileModel=filename,
+            title=self.currentWorld[0],
+            description="Minecraft %s" % (self.currentDimension[0]),
+            tags="minecraft test",
+            token=str(self.editToken.text())
         )
 
         def upload_finished():
@@ -135,7 +136,7 @@ class Window(QtGui.QWidget):
             progress.close()
             if rawData:
                 data = json.loads(rawData)
-                if data and "success" in data and data["success"] == False:
+                if data and "success" in data and not data["success"]:
                     QtGui.QMessageBox.critical(self, "Upload error", data["error"])
                     return
             QtGui.QMessageBox.critical(self, "Upload network error", self.reply.errorString())
@@ -218,7 +219,7 @@ class Window(QtGui.QWidget):
     def createAreaGroup(self):
         groupBox = QtGui.QGroupBox("Area limits")
         grid = QtGui.QGridLayout()
-        
+
         self.editXMin = QtGui.QLineEdit("0")
         self.editXMax = QtGui.QLineEdit("128")
         self.editYMin = QtGui.QLineEdit("60")
@@ -233,7 +234,7 @@ class Window(QtGui.QWidget):
         grid.addWidget(QtGui.QLabel("y"), 1, 0)
         grid.addWidget(self.editYMin, 1, 1)
         grid.addWidget(self.editYMax, 1, 2)
-        
+
         grid.addWidget(QtGui.QLabel("z"), 2, 0)
         grid.addWidget(self.editZMin, 2, 1)
         grid.addWidget(self.editZMax, 2, 2)
@@ -252,6 +253,7 @@ class Window(QtGui.QWidget):
 
         groupBox.setLayout(grid)
         return groupBox
+
 
 def main():
     app = QtGui.QApplication(sys.argv)

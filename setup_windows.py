@@ -5,7 +5,8 @@ setup(
     console=['minecraft2sketchfab.py'],
     options= {
         'py2exe': {
-            'includes': ['sip', 'PyQt4', 'poster' ]
+            'includes': ['sip', 'PyQt4', 'poster' ],
+            "dll_excludes": ["MSVCP90.dll"]
             }
         }
     )

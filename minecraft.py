@@ -5,24 +5,30 @@ import datetime
 import os
 import json
 import shutil
+
+from poster.encode import multipart_encode
+from poster.streaminghttp import register_openers
+import urllib2
+
 from PyQt4 import QtNetwork, QtCore
 
+
 def create_zip_file(directory, position):
-    if position == None:
-        position = { 
+    if position is None:
+        position = {
             "area": {
                 "x": [-64, 64],
                 "y": [60, 256],
                 "z": [-64, 64]
-                },
+            },
             "dimension": 0
         }
 
-    if os.path.exists(directory) == False:
+    if not os.path.exists(directory):
         print "directory %s does not exist" % directory
         return None
 
-    # remove the 
+    # remove the
     if directory.endswith('/') or directory.endswith('\\'):
         directory = directory[:len(directory)-1]
 
@@ -30,33 +36,48 @@ def create_zip_file(directory, position):
 
     tmpdir = tempfile.mkdtemp()
 
+    archive_dir = os.path.join(tmpdir, dirname)
+    # copy directory
+    shutil.copytree(directory, archive_dir)
+
+    # add export_obj.json into directory
+    f = open("%s/%s/%s" % (tmpdir, dirname, "export.mc2obj"), 'wb')
+    print(position)
+    f.write(json.dumps(position))
+    f.close()
+
     date = datetime.datetime.utcnow()
     name = "minecraft-%d-%d-%d.zip" % (date.year, date.month, date.day)
     filename = "%s/%s" % (tmpdir, name)
+    print filename
+
+    print "archive %s to file to %s" % (archive_dir, filename)
 
     # change dir to make a zip
+    path = os.getcwd()
+    os.chdir(tmpdir)
     zip = zipfile.ZipFile(filename, 'w')
 
-    for dirpath,dirs,files in os.walk(directory):
+    for dirpath, dirs, files in os.walk(dirname):
         for f in files:
             fn = os.path.join(dirpath, f)
-            an = os.path.relpath(fn, os.path.join(directory, "..")) #os.path.normpath(fn.replace(path, ''))
-            print(an)
-            zip.write(fn, an)
-    positionjson = json.dumps(position)
-    print(positionjson)
-    zip.writestr(os.path.join(os.path.basename(directory), "export_obj.json"), positionjson)
+            print fn
+            zip.write(fn)
     zip.close()
 
+    # restore path
+    os.chdir(path)
     return (filename, dirname)
 
-def upload(fileModel, token, source, description, title, tags = "minecraft"):
+
+def upload(fileModel, token, description, title, tags="minecraft"):
     def part_parameter(key, value):
         part = QtNetwork.QHttpPart()
         part.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"%s\"" % (key))
         part.setBody(value)
         return part
 
+    source = "minecraft-plugin"
     multiPart = QtNetwork.QHttpMultiPart(QtNetwork.QHttpMultiPart.FormDataType)
     multiPart.append(part_parameter("title", title))
     multiPart.append(part_parameter("description", description))
@@ -64,7 +85,6 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     multiPart.append(part_parameter("token", token))
     multiPart.append(part_parameter("source", source))
 
-    filename = os.path.basename(fileModel)
     modelPart = QtNetwork.QHttpPart()
     modelPart.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/octet-stream")
     modelPart.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"fileModel\"; filename=\"%s\"" % (fileModel))
@@ -74,7 +94,8 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    url = QtCore.QUrl("http://dev2.sketchfab.com/v1/models")
+    url = QtCore.QUrl("http://sketchfab.dev/v1/models")
+
     request = QtNetwork.QNetworkRequest(url)
 
     manager = QtNetwork.QNetworkAccessManager()
@@ -83,13 +104,43 @@ def upload(fileModel, token, source, description, title, tags = "minecraft"):
 
     return (manager, reply)
 
+
+def uploadURLLIB2(filename, api_key, description, model_name, tags="minecraft"):
+    register_openers()
+    url = "http://sketchfab-local.com/v1/models"
+    print filename
+    params = {
+        'fileModel': open(filename, "rb"),
+        'title': model_name,
+        'description': description,
+        'tags': tags,
+        'token': api_key,
+        'source': 'minecraft-plugin'
+    }
+
+    datagen, headers = multipart_encode(params)
+    request = urllib2.Request(url, datagen, headers)
+    result = None
+    contents = ""
+    try:
+        response = urllib2.urlopen(request)
+        print response.info()
+        contents = response.read()
+        result = True
+    except urllib2.HTTPError, error:
+        contents = error.read()
+        result = False
+    print contents
+    return result
+
+
 def process_and_upload(directory, position, api_key):
     result = create_zip_file(directory, position)
-    if result == None:
+    if result is None:
         return False
 
     filename, model_name = result
-    if not upload(filename, model_name):
+    if not uploadURLLIB2(filename, api_key, "", model_name):
         print "error while uploading file"
         return False
     return True
@@ -99,9 +150,9 @@ if __name__ == '__main__':
         sys.exit('Usage: %s api-key world-directory world-position' % sys.argv[0])
     position = None
     if len(sys.argv) > 3:
-        position = sys.argv[3];
+        position = sys.argv[3]
 
     api_key = sys.argv[1]
     directory = sys.argv[2]
-            
+
     process_and_upload(directory, position, api_key)
