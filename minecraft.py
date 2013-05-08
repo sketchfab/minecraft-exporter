@@ -12,6 +12,8 @@ import urllib2
 
 from PyQt4 import QtNetwork, QtCore
 
+sketchfab_url = "https://api.sketchfab.com"
+
 
 def create_zip_file(directory, position):
     if position is None:
@@ -94,8 +96,7 @@ def upload(fileModel, token, description, title, tags="minecraft"):
     file.setParent(multiPart)
     multiPart.append(modelPart)
 
-    #url = QtCore.QUrl("http://sketchfab.dev/v1/models")
-    url = QtCore.QUrl("https://sketchfab.com/v1/models")
+    url = QtCore.QUrl("%s/v1/models" % (sketchfab_url))
 
     request = QtNetwork.QNetworkRequest(url)
 
@@ -108,7 +109,7 @@ def upload(fileModel, token, description, title, tags="minecraft"):
 
 def uploadURLLIB2(filename, api_key, description, model_name, tags="minecraft"):
     register_openers()
-    url = "http://sketchfab-local.com/v1/models"
+    url = "%s/v1/models" % (sketchfab_url)
     print filename
     params = {
         'fileModel': open(filename, "rb"),
