@@ -13,6 +13,7 @@ from PyQt4 import QtGui
 
 import platform
 import minecraft
+import nbt
 
 
 def getDirectoryWorld():
@@ -60,8 +61,20 @@ def getDimensions(world):
             dimensions_final.append((b, int(a)))
     return dimensions_final
 
+def getPosition(world):
+    name, path = world
+
+    nbtfile = nbt.NBTFile(os.path.join(path, "level.dat"), "rb")
+    data = nbtfile["Data"]
+    player = data["Player"]
+    if player:
+        nbtpos = player["Pos"]
+        pos = (int(nbtpos[0].value), int(nbtpos[1].value), int(nbtpos[2].value))
+    else:
+        pos = (data["SpawnX"].value, data["SpawnY"].value, data["SpawnZ"].value)
+    return pos
+
 # a few thought
-# - the position should default to spawn (use https://github.com/codewarrior0/pymclevel or https://github.com/twoolie/NBT to read the maps)
 # - texturepack choice (upload texturepack also ?)
 # anything else ?
 
@@ -96,10 +109,14 @@ class Window(QtGui.QWidget):
         self.setWindowTitle('Minecraft2Sketchfab')
         self.settings = QtCore.QSettings("Sketchfab", "Minecraft2Sketchfab")
 
+        areaGroup = self.createAreaGroup()
+        worldGroup = self.createWorldGroup()
+        sketchfabGroup = self.createSketchfabGroup()
+
         mainLayout = QtGui.QVBoxLayout()
-        mainLayout.addWidget(self.createWorldGroup())
-        mainLayout.addWidget(self.createAreaGroup())
-        mainLayout.addWidget(self.createSketchfabGroup())
+        mainLayout.addWidget(worldGroup)
+        mainLayout.addWidget(areaGroup)
+        mainLayout.addWidget(sketchfabGroup)
 
         buttonBox = QtGui.QDialogButtonBox()
 
@@ -210,7 +227,7 @@ class Window(QtGui.QWidget):
             "You can get your in game coordinates using the Minecraft debug screen (Press F3 while in game).<br>"
             "</p>"
             "<p>"
-            "Default y coordinates are fine for most worlds as they export from sea level to sky.<br>"
+            "Default coordinates center the player inside a 256x256 box. On server maps, it is center around the spawn.<br>"
             "On flat worlds, as the surface level is way lower you will need to use 0 rather than 64.<br>"
             "</p>"
         )
@@ -268,6 +285,17 @@ class Window(QtGui.QWidget):
             item.setData(path)
             self.modelDimension.setItem(i, 0, item)
         self.comboDimension.setCurrentIndex(0)
+
+        pos = getPosition(self.currentWorld)
+        self.editXMin.setText(str(pos[0] - 128))
+        self.editXMax.setText(str(pos[0] + 128))
+        if pos[1] > 60:
+            self.editYMin.setText("64")
+        else:
+            self.editYMin.setText("0")
+        self.editYMax.setText("256")
+        self.editZMin.setText(str(pos[2] - 128))
+        self.editZMax.setText(str(pos[2] + 128))
 
     def createComboDimension(self):
         combo = QtGui.QComboBox()
