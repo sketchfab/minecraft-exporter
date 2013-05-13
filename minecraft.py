@@ -5,14 +5,114 @@ import datetime
 import os
 import json
 import shutil
+import glob
+import platform
+import nbt
 
 from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
 
-from PyQt4 import QtNetwork, QtCore
+sketchfab_url = "https://api.sketchfab.com"
 
-sketchfab_url = "https://dev2.sketchfab.com"
+
+def getDirectoryWorld():
+    # on linux I did not tested
+    config = ""
+    system = platform.platform().lower()
+    if system.find('darwin') != -1:
+        config = os.path.join(os.environ['HOME'], "Library", "Application Support", "minecraft", "saves")
+    elif system.find('windows') != -1:
+        config = os.path.join(os.environ['APPDATA'], ".minecraft", "saves")
+    else:
+        config = os.path.join(os.environ['HOME'], ".minecraft", "saves")
+    return config
+
+
+# return a list of world with directory
+def getWorlds():
+    config = getDirectoryWorld()
+    worlds_list = os.listdir(config)
+    worlds_final = []
+    for a in worlds_list:
+        p = os.path.join(config, a)
+        if os.path.isdir(p):
+            worlds_final.append((a, p))
+    return worlds_final
+
+
+def getWorldByName(name):
+    config = getDirectoryWorld()
+    p = os.path.join(config, name)
+    if os.path.isdir(p):
+        return (name, p)
+    return None
+
+
+def getDimensions(world):
+    name, path = world
+    dimensions_list = glob.glob(os.path.join(path, "DIM*"))
+    dimensions_final = [("Overworld", 0)]
+    default_dimensions = {
+        "DIM-1": "The Nether",
+        "DIM1": "The End"
+    }
+    for p in dimensions_list:
+        a = os.path.basename(p)
+        if a in default_dimensions:
+            b = default_dimensions[a]
+        else:
+            b = a
+        a = a[3:]
+
+        if os.path.isdir(p):
+            dimensions_final.append((b, int(a)))
+    return dimensions_final
+
+
+def getDimensionById(world, dimension_id):
+    world_name, world_path = world
+
+    if dimension_id == 0:
+        dimension_name = "region"
+    else:
+        dimension_name = "DIM%d" % (dimension_id)
+    dimension_path = os.path.join(world_path, dimension_name)
+    if os.path.isdir(dimension_path):
+        return (dimension_id, dimension_path)
+    return None
+
+
+def getPosition(world):
+    name, path = world
+
+    nbtfile = nbt.NBTFile(os.path.join(path, "level.dat"), "rb")
+    data = nbtfile["Data"]
+    player = data["Player"]
+    if player:
+        nbtpos = player["Pos"]
+        pos = (int(nbtpos[0].value), int(nbtpos[1].value), int(nbtpos[2].value))
+    else:
+        pos = (data["SpawnX"].value, data["SpawnY"].value, data["SpawnZ"].value)
+    return pos
+
+
+def getDefaultArea(world):
+    pos = getPosition(world)
+
+    xmin = pos[0] - 128
+    xmax = pos[0] + 128
+
+    ymax = 256
+    if pos[1] > 60:
+        ymin = 60
+    else:
+        ymin = 0
+
+    zmin = pos[2] - 128
+    zmax = pos[2] + 128
+
+    return [[xmin, ymin, zmin], [xmax, ymax, zmax]]
 
 
 def create_zip_file(directory, position):
@@ -71,7 +171,9 @@ def create_zip_file(directory, position):
     os.chdir(path)
     return (filename, dirname)
 
-def upload(fileModel, token, description, title, tags = "minecraft"):
+def upload(fileModel, token, description, title, tags="minecraft"):
+    from PyQt4 import QtNetwork, QtCore
+
     def part_parameter(key, value):
         part = QtNetwork.QHttpPart()
         part.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"%s\"" % (key))
@@ -121,18 +223,15 @@ def uploadURLLIB2(filename, api_key, description, model_name, tags = "minecraft"
 
     datagen, headers = multipart_encode(params)
     request = urllib2.Request(url, datagen, headers)
-    result = None
     contents = ""
     try:
         response = urllib2.urlopen(request)
         print response.info()
         contents = response.read()
-        result = True
+        return (True, contents)
     except urllib2.HTTPError, error:
         contents = error.read()
-        result = False
-    print contents
-    return result
+        return (False, contents)
 
 def process_and_upload(directory, position, api_key):
     result = create_zip_file(directory, position)
