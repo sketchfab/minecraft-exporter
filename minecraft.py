@@ -13,8 +13,6 @@ from poster.encode import multipart_encode
 from poster.streaminghttp import register_openers
 import urllib2
 
-from PyQt4 import QtNetwork, QtCore
-
 sketchfab_url = "https://api.sketchfab.com"
 
 
@@ -175,6 +173,8 @@ def create_zip_file(directory, position):
 
 
 def upload(fileModel, token, description, title, tags="minecraft"):
+    from PyQt4 import QtNetwork, QtCore
+
     def part_parameter(key, value):
         part = QtNetwork.QHttpPart()
         part.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"%s\"" % (key))
