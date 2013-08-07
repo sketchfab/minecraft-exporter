@@ -14,6 +14,7 @@ from poster.streaminghttp import register_openers
 import urllib2
 
 sketchfab_url = "https://api.sketchfab.com"
+max_size = [512, 512]
 
 
 def getDirectoryWorld():
@@ -103,7 +104,7 @@ def getDefaultArea(world):
     xmin = pos[0] - 128
     xmax = pos[0] + 128
 
-    ymax = 256
+    ymax = 255
     if pos[1] > 60:
         ymin = 60
     else:
@@ -120,7 +121,7 @@ def create_zip_file(directory, position):
         position = {
             "area": {
                 "x": [-64, 64],
-                "y": [60, 256],
+                "y": [60, 255],
                 "z": [-64, 64]
             },
             "dimension": 0
