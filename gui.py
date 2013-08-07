@@ -56,6 +56,21 @@ class Window(QtGui.QWidget):
         self.setLayout(mainLayout)
 
     def start_upload(self):
+        # get area
+        minx = int(self.editXMin.text())
+        maxx = int(self.editXMax.text())
+        miny = max(0, int(self.editYMin.text()))
+        maxy = min(255, int(self.editYMax.text()))
+        minz = int(self.editZMin.text())
+        maxz = int(self.editZMax.text())
+
+        self.editYMin.setText(str(miny))
+        self.editYMax.setText(str(maxy))
+
+        if (maxx-minx)*(maxz-minz) > minecraft.max_size[0] * minecraft.max_size[1]:
+            QtGui.QMessageBox.information(self, "Area limits", "The exporter's area size is limited to %sx%s.\nPlease specify a smaller x and/or z range.")
+            return
+
         progress = QtGui.QProgressDialog("Uploading...", "Cancel", 0, 100, self)
         progress.setWindowTitle("Sketchfab upload")
         progress.setWindowModality(QtCore.Qt.WindowModal)
@@ -64,9 +79,9 @@ class Window(QtGui.QWidget):
 
         params = {
             "area": {
-                "x": [int(self.editXMin.text()), int(self.editXMax.text())],
-                "y": [int(self.editYMin.text()), int(self.editYMax.text())],
-                "z": [int(self.editZMin.text()), int(self.editZMax.text())]
+                "x": [minx, maxx],
+                "y": [miny, maxy],
+                "z": [minz, maxz]
             },
             "dimension": self.currentDimension[1]
         }
@@ -75,7 +90,7 @@ class Window(QtGui.QWidget):
 
         token = str(self.editToken.text())
         if not token:
-            QtGui.QMessageBox.information(self, "Sketchfab token", "You need to specifiy your sketchfab api token.\nIt can be found on your dashboard.")
+            QtGui.QMessageBox.information(self, "Sketchfab token", "You need to specify your sketchfab api token.\nIt can be found on your dashboard.")
             return
 
         self.manager, self.reply = minecraft.upload(
@@ -88,7 +103,9 @@ class Window(QtGui.QWidget):
 
         def upload_finished():
             if not progress.wasCanceled():
-                data = json.loads(str(self.reply.readAll()))
+                http_response = self.reply.readAll()
+                print(http_response)
+                data = json.loads(str(http_response))
                 success = data['success']
                 result = data['result']
                 if success:
@@ -125,9 +142,16 @@ class Window(QtGui.QWidget):
         def upload_canceled():
             self.reply = None
 
+        def ssl_errors(err_list):
+            for err in err_list:
+                print(err.errorString())
+            self.reply.ignoreSslErrors()
+
         self.reply.finished.connect(upload_finished)
         self.reply.error.connect(upload_error)
         self.reply.uploadProgress.connect(upload_progress)
+        self.reply.sslErrors.connect(ssl_errors)
+
         progress.canceled.connect(upload_canceled)
 
     def open_about(self):
@@ -152,9 +176,9 @@ class Window(QtGui.QWidget):
             "You can get your in game coordinates using the Minecraft debug screen (Press F3 while in game).<br>"
             "</p>"
             "<p>"
-            "Default coordinates center the player inside a 256x256 box. On server maps, it is center around the spawn.<br>"
+            "Default coordinates center the player inside a %dx%d box. On server maps, it is center around the spawn.<br>"
             "On flat worlds, as the surface level is way lower you will need to use 0 rather than 64.<br>"
-            "</p>"
+            "</p>" % (minecraft.max_size[0], minecraft.max_size[1])
         )
         self.about.show()
         self.about.setFixedSize(self.about.size())
@@ -249,19 +273,19 @@ class Window(QtGui.QWidget):
         self.editZMin = coordEdit("0")
         self.editZMax = coordEdit("128")
 
-        labelX = QtGui.QLabel("x<sup><a href='#'>?</a></sup>")
+        labelX = QtGui.QLabel("x<sup>longitude <a href='#'>?</a></sup>")
         labelX.linkActivated.connect(self.open_areaHelp)
         grid.addWidget(labelX, 0, 0)
         grid.addWidget(self.editXMin, 0, 1)
         grid.addWidget(self.editXMax, 0, 2)
 
-        labelY = QtGui.QLabel("y<sup><a href='#'>?</a></sup>")
+        labelY = QtGui.QLabel("y<sup>altitude <a href='#'>?</a></sup>")
         labelY.linkActivated.connect(self.open_areaHelp)
         grid.addWidget(labelY, 1, 0)
         grid.addWidget(self.editYMin, 1, 1)
         grid.addWidget(self.editYMax, 1, 2)
 
-        labelZ = QtGui.QLabel("z<sup><a href='#'>?</a></sup>")
+        labelZ = QtGui.QLabel("z<sup>latitude <a href='#'>?</a></sup>")
         labelZ.linkActivated.connect(self.open_areaHelp)
         grid.addWidget(labelZ, 2, 0)
         grid.addWidget(self.editZMin, 2, 1)
