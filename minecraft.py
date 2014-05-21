@@ -117,21 +117,21 @@ def getDefaultArea(world):
 
 
 def create_zip_file(directory, position):
-    if position == None:
+    if position is None:
         position = { 
             "area": {
                 "x": [-64, 64],
                 "y": [60, 255],
                 "z": [-64, 64]
-                },
+            },
             "dimension": 0
         }
 
-    if os.path.exists(directory) == False:
+    if not os.path.exists(directory):
         print "directory %s does not exist" % directory
         return None
 
-    # remove the 
+    # remove the
     if directory.endswith('/') or directory.endswith('\\'):
         directory = directory[:len(directory)-1]
 
@@ -144,11 +144,11 @@ def create_zip_file(directory, position):
     shutil.copytree(directory, archive_dir)
 
     # add export_obj.json into directory
-    f = open("%s/%s/%s" % (tmpdir, dirname, "export_obj.json"), 'wb')
+    f = open("%s/%s/%s" % (tmpdir, dirname, "export.mc2obj"), 'wb')
     print(position)
     f.write(json.dumps(position))
     f.close()
-    
+
     date = datetime.datetime.utcnow()
     name = "minecraft-%d-%d-%d.zip" % (date.year, date.month, date.day)
     filename = "%s/%s" % (tmpdir, name)
@@ -161,7 +161,7 @@ def create_zip_file(directory, position):
     os.chdir(tmpdir)
     zip = zipfile.ZipFile(filename, 'w')
 
-    for dirpath,dirs,files in os.walk(dirname):
+    for dirpath, dirs, files in os.walk(dirname):
         for f in files:
             fn = os.path.join(dirpath, f)
             print fn
@@ -171,6 +171,7 @@ def create_zip_file(directory, position):
     # restore path
     os.chdir(path)
     return (filename, dirname)
+
 
 def upload(fileModel, token, description, title, tags="minecraft"):
     from PyQt4 import QtNetwork, QtCore
@@ -189,7 +190,6 @@ def upload(fileModel, token, description, title, tags="minecraft"):
     multiPart.append(part_parameter("token", token))
     multiPart.append(part_parameter("source", source))
 
-    filename = os.path.basename(fileModel)
     modelPart = QtNetwork.QHttpPart()
     modelPart.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/octet-stream")
     modelPart.setHeader(QtNetwork.QNetworkRequest.ContentDispositionHeader, "form-data; name=\"fileModel\"; filename=\"%s\"" % (fileModel))
@@ -209,7 +209,7 @@ def upload(fileModel, token, description, title, tags="minecraft"):
 
     return (manager, reply)
 
-def uploadURLLIB2(filename, api_key, description, model_name, tags = "minecraft"):
+def uploadURLLIB2(filename, api_key, description, model_name, tags="minecraft"):
     register_openers()
     url = "%s/v1/models" % (sketchfab_url)
     print filename
@@ -220,7 +220,7 @@ def uploadURLLIB2(filename, api_key, description, model_name, tags = "minecraft"
         'tags': tags,
         'token': api_key,
         'source': 'minecraft-plugin'
-        }
+    }
 
     datagen, headers = multipart_encode(params)
     request = urllib2.Request(url, datagen, headers)
@@ -234,9 +234,10 @@ def uploadURLLIB2(filename, api_key, description, model_name, tags = "minecraft"
         contents = error.read()
         return (False, contents)
 
+
 def process_and_upload(directory, position, api_key):
     result = create_zip_file(directory, position)
-    if result == None:
+    if result is None:
         return False
 
     filename, model_name = result
@@ -250,9 +251,9 @@ if __name__ == '__main__':
         sys.exit('Usage: %s api-key world-directory world-position' % sys.argv[0])
     position = None
     if len(sys.argv) > 3:
-        position = sys.argv[3];
+        position = sys.argv[3]
 
     api_key = sys.argv[1]
     directory = sys.argv[2]
-            
+
     process_and_upload(directory, position, api_key)

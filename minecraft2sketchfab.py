@@ -12,7 +12,6 @@ from optparse import OptionParser
 # anything else ?
 
 
-
 def main():
     parser = OptionParser()
     parser.add_option("-l", "--list", action="store_true", dest="list", help="List your saved minecraft worlds.")

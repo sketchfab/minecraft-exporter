@@ -42,7 +42,7 @@ def main(options):
             title = options.title
 
         if not options.area is None:
-            m = re.match("(\d+),(\d+),(\d+),(\d+)", options.area)
+            m = re.match("(-?\d+),(-?\d+),(-?\d+),(-?\d+)", options.area)
             if not m:
                 print("Invalid area")
                 return
